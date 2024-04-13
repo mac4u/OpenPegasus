@@ -12,7 +12,27 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@v1.4.1
     - name: Install
       run: | 
-        choco install make --version=3.81 -y
+          $downloadUrls = @(
+              "https://netix.dl.sourceforge.net/project/gnuwin32/make/3.81/make-3.81-bin.zip",
+              "https://unlimited.dl.sourceforge.net/project/gnuwin32/make/3.81/make-3.81-dep.zip"
+          )
+          $extractedFolderName = "make381"
+          $downloadPath = ".\make_files"
+          
+          New-Item -ItemType Directory -Path $downloadPath -Force | Out-Null
+          
+          foreach ($url in $downloadUrls) {
+              $fileName = Split-Path -Leaf $url
+              $filePath = Join-Path -Path $downloadPath -ChildPath $fileName
+              Invoke-WebRequest -Uri $url -OutFile $filePath -AllowInsecureRedirect
+          }
+          
+          Expand-Archive -Path "$downloadPath\make-3.81-bin.zip" -DestinationPath "$downloadPath\$extractedFolderName"
+          Expand-Archive -Path "$downloadPath\make-3.81-dep.zip" -DestinationPath "$downloadPath\$extractedFolderName"
+          Move-Item -Path "$downloadPath\$extractedFolderName" -Destination "$env:ProgramFiles\make381" -Force
+          $env:Path += ";$env:ProgramFiles\make381"
+          [Environment]::SetEnvironmentVariable("Path", $env:Path, [EnvironmentVariableTarget]::Machine)
+
     - name: run
       run: |
         make
