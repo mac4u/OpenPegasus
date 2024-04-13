@@ -1,0 +1,19 @@
+name: Build on windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    name: Windows build
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ilammy/msvc-dev-cmd@v1.4.1
+    - name: Install
+      run: | 
+        choco install make --version=3.81 -y
+    - name: run
+      run: |
+        make
+      shell: cmd
