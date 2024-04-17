@@ -1,19 +1,39 @@
-name: Build on windows
+name: Windows OpenPegasus Build
 
-on:
-  workflow_dispatch:
+on: 
+  - workflow_dispatch
 
 jobs:
-  windows:
-    name: Windows build
+  build:
     runs-on: windows-latest
+
     steps:
-    - uses: actions/checkout@v4
-    - uses: ilammy/msvc-dev-cmd@v1.4.1
-    - name: Install
-      run: | 
-        choco install make --version=3.81 -y
-    - name: run
+    - uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run:  choco install make -y --no-progress
+
+    - name: Run MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Configure OpenPegasus
+      shell: powershell
       run: |
-        make
+        echo "Step Configure OpenPegasus for build and test common config"
+        Write-Output "PEGASUS_ROOT=${env:GITHUB_WORKSPACE}\pegasus" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        Write-Output "PEGASUS_HOME=${env:GITHUB_WORKSPACE}\work" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        Write-Output "PEGASUS_PLATFORM=WIN64_X86_64_MSVC" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        Write-Output "PEGASUS_HAS_SSL=0" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        Write-Output "PEGASUS_ENABLE_SLP=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+     
+    - name: Testing variables
       shell: cmd
+      run: |
+          echo "testing variables"
+          echo %PEGASUS_ROOT%
+          echo %PEGASUS_HOME%
+          echo %PEGASUS_PLATFORM%
+
+    - name: Build World
+      working-directory: pegasus
+      run: make world
