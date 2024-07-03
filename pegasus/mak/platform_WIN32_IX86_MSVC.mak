@@ -45,7 +45,7 @@ DEFINES = -DPEGASUS_PLATFORM_$(PEGASUS_PLATFORM) -D_WIN32_WINNT=0x0600
 CL_VERSION := $(word 7, $(shell cl.exe 2>&1))
 CL_MAJOR_VERSION := $(word 1, $(subst .,  , $(CL_VERSION)))
 
-$(info Found CL major version: $(CL_MAJOR_VERSION))
+#$(info Found CL major version: $(CL_MAJOR_VERSION))
 
 ifneq ($(CL_MAJOR_VERSION), 19)
   $(error Update to VS 2019 Build Tools environment variable undefined)
