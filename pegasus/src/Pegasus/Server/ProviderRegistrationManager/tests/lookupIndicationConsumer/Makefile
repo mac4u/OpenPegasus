@@ -43,6 +43,7 @@ SOURCES = TestPrvRegMgrLookupIndicationConsumer.cpp
 include $(ROOT)/mak/program.mak
 
 tests:
+	@ $(ECHO) +++++ Test lookupIndicationConsumer
 	@$(MAKE) -f../load/Makefile localrep REPOSITORYDIR=$(TMP_DIR)
 	@$(PROGRAM)
 	@$(MAKE) -f../load/Makefile clean REPOSITORYDIR=$(TMP_DIR)
