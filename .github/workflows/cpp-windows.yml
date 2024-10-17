@@ -52,4 +52,4 @@ jobs:
       - name: Build commands
         shell: cmd
         working-directory: pegasus
-        run: runas.exe /savecred /user:administrator "${{matrix.commands}}"
+        run: ${{matrix.commands}}
