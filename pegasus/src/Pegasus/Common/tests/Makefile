@@ -50,7 +50,6 @@ DIRS = \
     Dir \
     Executor \
     FileLock \
-    FileSystem \
     Flavor \
     Formatter \
     HashTable \
