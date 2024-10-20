@@ -7,7 +7,7 @@ jobs:
   openPegasusMatrix:
     strategy:
       matrix:
-        commands: ['make world']
+        commands: ['make world', "make clientlibs", "make"]
 
     runs-on: windows-latest
     steps:
