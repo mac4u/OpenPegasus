@@ -58,7 +58,6 @@ DIRS = \
     IPC \
     L10N \
     L10N/msg \
-    Logger \
     MessageQueue \
     MessageQueueService \
     MessageSerializer \
@@ -89,7 +88,6 @@ DIRS = \
     Thread \
     ThreadPool \
     TimeValue \
-    Tracer \
     ValidateClass \
     Value \
     XmlDump \
