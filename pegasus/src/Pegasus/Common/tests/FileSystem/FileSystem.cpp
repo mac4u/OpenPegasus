@@ -124,6 +124,8 @@ int main(int, char** argv)
         tmpDir = ".";
     }
 
+    cout << tmpDir << " PEGASUS_TMP value" << endl;
+
     _cleanup(tmpDir);
 
     TestGetLine(tmpDir);

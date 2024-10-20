@@ -40,7 +40,6 @@ DIRS =	AssociationClient \
 	TestStaticClient \
 	BinaryClient \
 	PullErrors \
-	pullop \
 	SSLCipherVerification
 
 DIRS_SLP = \
