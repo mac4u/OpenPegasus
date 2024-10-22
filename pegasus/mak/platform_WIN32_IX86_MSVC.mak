@@ -42,64 +42,21 @@ DEFINES = -DPEGASUS_PLATFORM_$(PEGASUS_PLATFORM) -D_WIN32_WINNT=0x0600
 #
 # Determine the version of the compiler being used.
 #
-CL_VERSION := $(word 8, $(shell cl.exe 2>&1))
+CL_VERSION := $(word 7, $(shell cl.exe 2>&1))
 CL_MAJOR_VERSION := $(word 1, $(subst .,  , $(CL_VERSION)))
 
-VC_CL_VERSIONS := 14 15 16
-VC_CL_VERSION  := $(findstring $(CL_MAJOR_VERSION), $(VC_CL_VERSIONS))
+#$(info Found CL major version: $(CL_MAJOR_VERSION))
 
-#
-# Determine the version of Windows being used.
-# IPv6 is not supported on Windows 2000 (earliest Windows version supported
-# by Pegasus), but we don't enforce that here.
-# IPv6 is not supported by the VC 6 compiler (CL_MAJOR_VERSION is 12 for VC 6).
-#
-ifeq ($(CL_MAJOR_VERSION), 12)
-    PEGASUS_ENABLE_IPV6 = false
+ifneq ($(CL_MAJOR_VERSION), 19)
+  $(error Update to VS 2019 Build Tools environment variable undefined)
 endif
 
-
-#
-# The flags set here should be valid for VC 6.
-#
-# The -Zm105 flag was added as part of bug 4418 to resolve this compile error:
-#   C:\Program Files\Microsoft Visual Studio\VC98\include\xlocale(467) :
-#   fatal error C1076: compiler limit : internal heap limit reached; use /Zm to
-#   specify a higher limit
-#
-CXX_VERSION_FLAGS := -GX -Zm105
-CXX_VERSION_DEBUG_FLAGS :=
-CXX_VERSION_RELEASE_FLAGS :=
-LINK_VERSION_RELEASE_FLAGS :=
-
-
-#
-# CL_MAJOR_VERSION 13 is VC 7
-#
-ifeq ($(CL_MAJOR_VERSION), 13)
-    CXX_VERSION_FLAGS := -Wp64 -EHsc
-    CXX_VERSION_DEBUG_FLAGS := -Gs
-    CXX_VERSION_RELEASE_FLAGS := -Gs -GF -Gy
-    LINK_VERSION_RELEASE_FLAGS := /LTCG /OPT:REF /OPT:ICF=5 /OPT:NOWIN98
-endif
-
-
-#
-# CL_MAJOR_VERSION 14, 15 or 16 (i.e., VC 8, VC 9 or VC 2010)
-#
-ifeq ($(CL_MAJOR_VERSION), $(VC_CL_VERSION))
-    CXX_VERSION_FLAGS := -EHsc
-    CXX_VERSION_DEBUG_FLAGS := -RTCc -RTCsu
-    CXX_VERSION_RELEASE_FLAGS := -GF -GL -Gy
-    # VC 2010 only setting as it dont take /OPT:NOWIN98 anymore
-    ifeq ($(CL_MAJOR_VERSION), 16)
-        LINK_VERSION_RELEASE_FLAGS := /LTCG /OPT:REF /OPT:ICF=5
-    else
-        LINK_VERSION_RELEASE_FLAGS := /LTCG /OPT:REF /OPT:ICF=5 /OPT:NOWIN98
-    endif
-    DEFINES += -D_CRT_SECURE_NO_DEPRECATE
-    DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE
-endif
+CXX_VERSION_FLAGS := -EHsc
+CXX_VERSION_DEBUG_FLAGS := -RTCc -RTCsu
+CXX_VERSION_RELEASE_FLAGS := -GF -GL -Gy
+LINK_VERSION_RELEASE_FLAGS := /LTCG /OPT:REF /OPT:ICF=5
+DEFINES += -D_CRT_SECURE_NO_DEPRECATE
+DEFINES += -D_CRT_NONSTDC_NO_DEPRECATE
 
 
 ifdef PEGASUS_USE_DEBUG_BUILD_OPTIONS
@@ -208,12 +165,6 @@ endif
 ##
 ##################################
 ifeq ($(PEGASUS_BUILD_WMIMAPPER),true)
-  ifeq ($(CL_MAJOR_VERSION), 12)
-    PEGASUS_WMIMAPPER_NEED_MSSDK=true
-  endif
-  ifeq ($(CL_MAJOR_VERSION), 13)
-    PEGASUS_WMIMAPPER_NEED_MSSDK=true
-  endif
   ifeq ($(PEGASUS_WMIMAPPER_NEED_MSSDK),true)
     ifndef MSSdk
       $(error MSSdk environment variable undefined)

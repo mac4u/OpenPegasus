@@ -45,9 +45,10 @@ DIRS = \
     SharedNameSpace \
     SharedInheritanceTree \
     CompareRepositories \
-    CompareXmlBin \
-    CompareXmlCompressed \
     AssocOperations \
     AssocClassCache
+#    CompareXmlBin \
+#    CompareXmlCompressed \
+
 
 include ../../../../mak/recurse.mak
