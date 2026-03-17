@@ -1,53 +1,23 @@
-# This is a basic workflow to help you get started with Actions
-# workflow -
 name: OpenPegasus Build Matrix
-
-env:
-    # Until we figure out how to create the home subdirectory
-    ACTIONS_ALLOW_UNSECURE_COMMANDS: true
-
-# Controls when the action will run. Triggers the workflow on push, pull
 
 on:
   - workflow_dispatch
-  #push:
-    #branches: [ main, OpenPegasus-*-Release ]
-  #pull_request:
-    #branches: [ main, OpenPegasus-*-Release ]
-
-
-
-# A workflow run is made up of one or more jobs that can run sequentially or
-# in parallel
 
 jobs:
 
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
-
     name: ${{ matrix.config.name }}
 
-    runs-on: ${{ matrix.config.os }} #
+    runs-on: ${{ matrix.config.os }}
 
     strategy:
       fail-fast: true
       matrix:
         config:
-        #- {
-            #name: "Ubuntu_Latest_GCC",
-            #os: ubuntu-latest,
-            #artifact: "ubuntu_gcc",
-            #build_type: "Development",
-            #pegasus_platform: "LINUX_X86_64_GNU",
-            #cc: "gcc",
-            #cxx: "g++",
-          #}
-        # Ignore this one for now.
         - {
-            name: "Ubuntu_GCC_9",
+            name: "Ubuntu_Latest_GCC",
             os: ubuntu-latest,
-            artifact: "ubuntu_gcc9",
+            artifact: "ubuntu_gcc",
             build_type: "Development",
             pegasus_platform: "LINUX_X86_64_GNU",
             cc: "gcc",
@@ -56,42 +26,18 @@ jobs:
 
     steps:
       # Checks-out repository under GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Display event name, etc
         run: |
           echo github.event.action: ${{ github.event.action }}
           echo github.event_name: ${{ github.event_name }}
-      #- name: Install dependencies on windows
-        #if: startsWith(matrix.config.os, 'windows')
-        #run: |
-          ##choco install ninja cmake
-          ##ninja --version
-          ##cmake --version
-        ## cmd "${{ matrix.config.environment_script }}"
 
       - name: Install ubuntu dependencies and updates
-        if: startsWith(matrix.config.name, 'Ubuntu_Latest_GCC')
+        if: startsWith(matrix.config.os, 'ubuntu')
         run: |
           sudo apt-get update
           gcc --version
-      - name: Install dependencies on ubuntu9
-        if: startsWith(matrix.config.name, 'Ubuntu_GCC_9')
-        run: |
-          echo gcc version before
-          gcc --version
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-          sudo apt-get update
-          sudo apt-get install gcc-9 g++-9
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 --slave /usr/bin/g++ g++ /usr/bin/g++-9 --slave /usr/bin/gcov gcov /usr/bin/gcov-9
-          echo gcc version after update
-          gcc --version
-      - name: Install dependencies on macos
-        if: startsWith(matrix.config.os, 'macos')
-        run: |
-          brew install p7zip cmake ninja
-          ninja --version
-          cmake --version
 
       - name: Configure OpenPegasus
         shell: bash
