@@ -30,7 +30,7 @@ jobs:
           echo "Step Configure OpenPegasus for build and test common config"
           Write-Output "PEGASUS_ROOT=${env:GITHUB_WORKSPACE}\pegasus" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Output "PEGASUS_HOME=${env:GITHUB_WORKSPACE}\work" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Output "PEGASUS_PLATFORM=WIN32_IX86_MSVC" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Output "PEGASUS_PLATFORM=WIN64_X86_64_MSVC" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Output "PEGASUS_ENABLE_SLP=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Output "PEGASUS_TMP=${env:GITHUB_WORKSPACE}\temp" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Output "${env:GITHUB_WORKSPACE}\work\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
@@ -49,6 +49,8 @@ jobs:
 
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
       - name: Build commands
         shell: cmd
         working-directory: pegasus
