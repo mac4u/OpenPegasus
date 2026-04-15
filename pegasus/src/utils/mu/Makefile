@@ -49,7 +49,8 @@ ifeq ($(OS_TYPE),windows)
     EXE_OUTPUT = $(EXE_OUT)$(PROGRAM)$(EXE)
     DEFINES += -DOS_WINDOWS
     # Use native Windows commands for bootstrapping mu itself
-    RM = del
+    # Use cmd /c for reliable delete operations on Windows
+    RM = cmd /c del /f /q
     COPY = copy
     MKDIRHIER = mkdir
     BACKWARD_SLASH = 1

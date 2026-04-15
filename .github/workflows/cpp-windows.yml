@@ -49,6 +49,14 @@ jobs:
 
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Create PEGASUS_HOME directories
+        shell: cmd
+        run: |
+          if not exist "%PEGASUS_HOME%\bin" mkdir "%PEGASUS_HOME%\bin"
+          if not exist "%PEGASUS_HOME%\lib" mkdir "%PEGASUS_HOME%\lib"
+          if not exist "%PEGASUS_HOME%\obj" mkdir "%PEGASUS_HOME%\obj"
+
       - name: Build commands
         shell: cmd
         working-directory: pegasus
