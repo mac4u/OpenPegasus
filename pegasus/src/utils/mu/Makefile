@@ -48,7 +48,10 @@ ifeq ($(OS_TYPE),windows)
     # Windows linker does not allow space before pgm name
     EXE_OUTPUT = $(EXE_OUT)$(PROGRAM)$(EXE)
     DEFINES += -DOS_WINDOWS
+    # Use native Windows commands for bootstrapping mu itself
     RM = del
+    COPY = copy
+    MKDIRHIER = mkdir
     BACKWARD_SLASH = 1
     MU_EXE_LOCATION = $(subst /,\,$(BIN_DIR)\$(PROGRAM)$(EXE))
     MU_EXE_MANIFEST_LOCATION = $(subst /,\,$(BIN_DIR)\$(PROGRAM)$(EXE)$(MANIFEST))
@@ -119,7 +122,11 @@ ifeq ($(OS),zos)
 else
 	$(LINK_WRAPPER) $(CXX) $(FLAGS) $(EXE_OUTPUT) $(OBJECTS) $(FULL_LIBRARIES) $(SYS_LIB)
 endif
+ifeq ($(OS_TYPE),windows)
+	-@if not exist "$(subst /,\,$(BIN_DIR))" $(MKDIRHIER) "$(subst /,\,$(BIN_DIR))"
+else
 	$(MKDIRHIER) $(BIN_DIR)
+endif
 	-$(RM) $(MU_EXE_LOCATION)
 ifeq ($(OS_TYPE),windows)
 	-$(RM) $(MU_EXE_MANIFEST_LOCATION)
@@ -127,7 +134,11 @@ ifeq ($(OS_TYPE),windows)
 endif
 	$(COPY) $(FULL_PROGRAM) $(MU_EXE_LOCATION)
 ifdef PEGASUS_TEST_VALGRIND_LOG_DIR
+ifeq ($(OS_TYPE),windows)
+	-@if not exist "$(subst /,\,$(ACTUAL_BIN_DIR))" $(MKDIRHIER) "$(subst /,\,$(ACTUAL_BIN_DIR))"
+else
 	$(MKDIRHIER) $(ACTUAL_BIN_DIR)
+endif
 	$(COPY) $(FULL_PROGRAM) $(ACTUAL_BIN_DIR)/$(FULL_PROGRAM)
 endif
 
