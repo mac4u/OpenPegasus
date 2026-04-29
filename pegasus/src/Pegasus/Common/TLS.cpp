@@ -41,7 +41,6 @@
 #include "TLS.h"
 
 #ifdef PEGASUS_HAS_SSL
-# define OPENSSL_NO_KRB5 1
 # include <openssl/err.h>
 # include <openssl/ssl.h>
 # include <openssl/rand.h>
@@ -600,7 +599,7 @@ Sint32 SSLSocket::connect(Uint32 timeoutMilliseconds)
         PEG_TRACE_CSTRING(TRC_SSL, Tracer::LEVEL4,
            "Attempting to verify server certificate.");
 
-        X509* server_cert = SSL_get_peer_certificate(sslConnection);
+        X509* server_cert = SSL_get1_peer_certificate(sslConnection);
         if (server_cert != NULL)
         {
             //

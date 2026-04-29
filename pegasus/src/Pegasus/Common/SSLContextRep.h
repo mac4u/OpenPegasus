@@ -33,7 +33,6 @@
 #define Pegasus_SSLContextRep_h
 
 #ifdef PEGASUS_HAS_SSL
-# define OPENSSL_NO_KRB5 1
 # include <openssl/err.h>
 # include <openssl/ssl.h>
 # include <openssl/rand.h>
@@ -54,15 +53,6 @@
 #include <Pegasus/Common/Tracer.h>
 #include <Pegasus/Common/AutoPtr.h>
 #include <Pegasus/Common/SharedPtr.h>
-
-//
-// Typedef's for OpenSSL callback functions.
-//
-extern "C"
-{
-    typedef void (* CRYPTO_SET_LOCKING_CALLBACK)(int, int, const char *, int);
-    typedef unsigned long (* CRYPTO_SET_ID_CALLBACK)(void);
-}
 
 PEGASUS_NAMESPACE_BEGIN
 
@@ -100,17 +90,12 @@ public:
 
         if (_instanceCount == 0)
         {
-            _initializeCallbacks();
-
-            //important as per following site for 
-            //http://www.openssl.org/support/faq.html#PROG
-#ifdef OPENSSL_11_API_COMPATIBILITY
-            OPENSSL_malloc_init();
-#else            
-            CRYPTO_malloc_init();            
-#endif
-            SSL_library_init();
-            SSL_load_error_strings();
+            // OpenSSL 3.0+ initializes automatically on first use.
+            // An explicit call ensures it is initialised here, prior
+            // to any concurrent usage, and loads error strings.
+            OPENSSL_init_ssl(
+                OPENSSL_INIT_LOAD_SSL_STRINGS |
+                OPENSSL_INIT_LOAD_CRYPTO_STRINGS, NULL);
         }
 
         _instanceCount++;
@@ -125,17 +110,7 @@ public:
             "In ~SSLEnvironmentInitializer(), _instanceCount is %d",
             _instanceCount));
 
-
-        if (_instanceCount == 0)
-        {
-            EVP_cleanup();
-            CRYPTO_cleanup_all_ex_data();
-            ERR_free_strings();
-            _uninitializeCallbacks();
-        }
-        // TODO:  deprecated 1.0.0 in favor of ERR_remove_thread_state
-        // but should exist. Do not know why failure.  This is deprecated
-        // ERR_remove_state(0);
+        // OpenSSL 3.0+ cleans up automatically at process exit.
     }
 
 private:
@@ -143,79 +118,9 @@ private:
     SSLEnvironmentInitializer(const SSLEnvironmentInitializer&);
     SSLEnvironmentInitializer& operator=(const SSLEnvironmentInitializer&);
 
-    /*
-        Initialize the SSL locking and ID callbacks.
-    */
-    static void _initializeCallbacks()
-    {
-        PEG_TRACE_CSTRING(TRC_SSL, Tracer::LEVEL4,
-            "Initializing SSL callbacks.");
-
-        // Allocate Memory for _sslLocks. SSL locks needs to be able to handle
-        // up to CRYPTO_num_locks() different mutex locks.
-
-        _sslLocks.reset(new Mutex[CRYPTO_num_locks()]);
-// TODO: hide for now
-//#ifdef PEGASUS_HAVE_PTHREADS
-        // Set the ID callback. The ID callback returns a thread ID.
-//# ifdef PEGASUS_OS_VMS
-//        CRYPTO_set_id_callback((CRYPTO_SET_ID_CALLBACK) _getThreadId);
-//# else
-//        CRYPTO_set_id_callback((CRYPTO_SET_ID_CALLBACK) pthread_self);
-//# endif
-//#endif
-
-        // Set the locking callback.
-
-        CRYPTO_set_locking_callback(
-            (CRYPTO_SET_LOCKING_CALLBACK) _lockingCallback);
-    }
-
-#if defined(PEGASUS_OS_VMS) && defined(PEGASUS_HAVE_PTHREADS)
-    static unsigned long _getThreadId(void)
-    {
-        return pthread_getsequence_np(pthread_self());
-    }
-#endif
-    /*
-        Reset the SSL locking and ID callbacks.
-    */
-    static void _uninitializeCallbacks()
-    {
-        PEG_TRACE_CSTRING(TRC_SSL, Tracer::LEVEL4, "Resetting SSL callbacks.");
-#ifndef OPENSSL_11_API_COMPATIBILITY
-        CRYPTO_set_locking_callback(NULL);
-        CRYPTO_set_id_callback(NULL);
-#endif
-        _sslLocks.reset();
-    }
-
-    static void _lockingCallback(
-        int mode,
-        int type,
-        const char*,
-        int)
-    {
-        if (mode & CRYPTO_LOCK)
-        {
-            _sslLocks.get()[type].lock();
-        }
-        else
-        {
-            _sslLocks.get()[type].unlock();
-        }
-    }
-
-    /**
-        Locks to be used by SSL.
-    */
-    static AutoArrayPtr<Mutex> _sslLocks;
-
     /**
         Count of the instances of this class.  The SSL environment must be
         initialized when the first SSLEnvironmentInitializer is constructed.
-        It must be uninitialized when the last SSLEnvironmentInitializer is
-        destructed.
     */
     static int _instanceCount;
 

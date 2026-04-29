@@ -35,7 +35,6 @@
 
 #ifdef PEGASUS_HAS_SSL
 # include <Pegasus/Common/Network.h>
-# define OPENSSL_NO_KRB5 1
 # include <openssl/err.h>
 # include <openssl/ssl.h>
 # include <openssl/rand.h>

@@ -32,7 +32,6 @@
 #include <Pegasus/Common/CIMNameCast.h>
 #include "CertificateProvider.h"
 
-#define OPENSSL_NO_KRB5 1
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #include <openssl/rand.h>
@@ -64,11 +63,6 @@
 
 PEGASUS_USING_STD;
 PEGASUS_NAMESPACE_BEGIN
-
-// Set flag if OpenSSL version ge 1.1.0
-# if OPENSSL_VERSION_NUMBER >= 0x10100000L
-#  define OPENSSL_11_API_COMPATIBILITY
-# endif
 
 // PG_SSLCertificate property names
 static const CIMName ISSUER_NAME_PROPERTY      =
@@ -164,13 +158,15 @@ inline CIMDateTime getDateTime(const ASN1_UTCTIME* utcTime)
     struct tm time;
     int offset;
     char plusOrMinus = '+';
-    unsigned char* utcTimeData = utcTime->data;
+    // Use the 1.1.0+ opaque-struct accessors instead of accessing fields
+    // directly; ASN1_STRING internals are not public in OpenSSL 3.0+.
+    const unsigned char* utcTimeData = ASN1_STRING_get0_data(utcTime);
 
     memset(&time, '\0', sizeof(time));
 
 #define g2(p) ( ( (p)[0] - '0' ) * 10 + (p)[1] - '0' )
 
-    if (utcTime->type == V_ASN1_GENERALIZEDTIME)
+    if (ASN1_STRING_type(utcTime) == V_ASN1_GENERALIZEDTIME)
     {
         time.tm_year = g2(utcTimeData) * 100;
         utcTimeData += 2;  // Remaining data is equivalent to ASN1_UTCTIME type
@@ -518,11 +514,11 @@ inline CIMInstance _getCRLInstance(X509_CRL* xCrl, String host,
         CIMProperty(ISSUER_NAME_PROPERTY, CIMValue(String(issuerName))));
 
     // Validity dates
-    CIMDateTime lastUpdate = getDateTime(X509_CRL_get_lastUpdate(xCrl));
+    CIMDateTime lastUpdate = getDateTime(X509_CRL_get0_lastUpdate(xCrl));
     cimInstance.addProperty(CIMProperty(LAST_UPDATE_PROPERTY,
                 CIMValue(lastUpdate)));
 
-    CIMDateTime nextUpdate = getDateTime(X509_CRL_get_nextUpdate(xCrl));
+    CIMDateTime nextUpdate = getDateTime(X509_CRL_get0_nextUpdate(xCrl));
     cimInstance.addProperty(CIMProperty(NEXT_UPDATE_PROPERTY,
                 CIMValue(nextUpdate)));
 
@@ -536,23 +532,11 @@ inline CIMInstance _getCRLInstance(X509_CRL* xCrl, String host,
     for (int i = 0; i < numRevoked; i++)
     {
         r = sk_X509_REVOKED_value(revoked, i);
-        // TODO: 1. Same as code in SSLContext. Make common method
-        // 1.1.0 move to use
-        // rawSerialNumber = ASN1_INTEGER_get(r->serialNumber);
-#ifndef OPENSSL_11_API_COMPATIBILITY
-        rawSerialNumber = ASN1_INTEGER_get(r->serialNumber);
-#else
         rawSerialNumber = ASN1_INTEGER_get(X509_REVOKED_get0_serialNumber(r));
-#endif
 
         sprintf(serial, "%lu", (unsigned long)rawSerialNumber);
         revokedSerialNumbers.append(String(serial));
-        // Changed pointer reference for OpenSSL 1.1.x
-#ifndef OPENSSL_11_API_COMPATIBILITY
-        revocationDate = getDateTime(r->revocationDate);
-#else
         revocationDate = getDateTime(X509_REVOKED_get0_revocationDate(r));
-#endif
 
         revocationDates.append(revocationDate);
     }
@@ -1947,8 +1931,8 @@ void CertificateProvider::invokeMethod(
             subjectName = String(buf);
 
             // Validity dates
-            notBefore = getDateTime(X509_get_notBefore(xCert.get()));
-            notAfter = getDateTime(X509_get_notAfter(xCert.get()));
+            notBefore = getDateTime(X509_get0_notBefore(xCert.get()));
+            notAfter = getDateTime(X509_get0_notAfter(xCert.get()));
 
             PEG_TRACE((TRC_CONTROLPROVIDER,Tracer::LEVEL4,
                 "IssuerName: %s",(const char*)issuerName.getCString()));
@@ -2216,8 +2200,8 @@ void CertificateProvider::invokeMethod(
             // openssl will only issue a warning if the CRL is expired
             // However, we still don't want to let them register an expired
             // or invalid CRL
-            lastUpdate = getDateTime(X509_CRL_get_lastUpdate(xCrl.get()));
-            nextUpdate = getDateTime(X509_CRL_get_nextUpdate(xCrl.get()));
+            lastUpdate = getDateTime(X509_CRL_get0_lastUpdate(xCrl.get()));
+            nextUpdate = getDateTime(X509_CRL_get0_nextUpdate(xCrl.get()));
             try
             {
                 if (CIMDateTime::getDifference(

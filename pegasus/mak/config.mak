@@ -777,11 +777,7 @@ ifdef PEGASUS_HAS_SSL
         endif
     endif
     ifndef OPENSSL_SET_SERIAL_SUPPORTED
-        ifneq (, $(findstring 0.9.6, $(shell $(OPENSSL_COMMAND) version)))
-            OPENSSL_SET_SERIAL_SUPPORTED = false
-        else
-            OPENSSL_SET_SERIAL_SUPPORTED = true
-        endif
+        OPENSSL_SET_SERIAL_SUPPORTED = true
     endif
 
     # Enable CRL verification
