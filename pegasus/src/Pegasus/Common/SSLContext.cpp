@@ -33,12 +33,10 @@
 # include <Pegasus/Common/Config.h>
 # include <Pegasus/Common/Executor.h>
 # include <Pegasus/Common/Network.h>
-# define OPENSSL_NO_KRB5 1
 # include <openssl/bio.h>
 # include <openssl/err.h>
 # include <openssl/ssl.h>
 # include <openssl/rand.h>
-# include <openssl/tls1.h>
 #else
 # define SSL_CTX void
 #endif // end of PEGASUS_HAS_SSL
@@ -122,7 +120,6 @@ char *ossl_err_as_string(void)
     return ret;
 }
 
-AutoArrayPtr<Mutex> SSLEnvironmentInitializer::_sslLocks;
 int SSLEnvironmentInitializer::_instanceCount = 0;
 Mutex SSLEnvironmentInitializer::_instanceCountMutex;
 
@@ -135,13 +132,15 @@ CIMDateTime getDateTime(const ASN1_UTCTIME *utcTime)
     struct tm time;
     int offset;
     char plusOrMinus = '+';
-    unsigned char* utcTimeData = utcTime->data;
+    // Use the 1.1.0+ opaque-struct accessors instead of accessing fields
+    // directly; ASN1_STRING internals are not public in OpenSSL 3.0+.
+    const unsigned char* utcTimeData = ASN1_STRING_get0_data(utcTime);
 
     memset(&time, '\0', sizeof(time));
 
 #define g2(p) ( ( (p)[0] - '0' ) * 10 + (p)[1] - '0' )
 
-    if (utcTime->type == V_ASN1_GENERALIZEDTIME)
+    if (ASN1_STRING_type(utcTime) == V_ASN1_GENERALIZEDTIME)
     {
         time.tm_year = g2(utcTimeData) * 100;
         utcTimeData += 2;  // Remaining data is equivalent to ASN1_UTCTIME type
@@ -261,8 +260,6 @@ int SSLCallback::verificationCRLCallback(
     PEG_TRACE_CSTRING(TRC_SSL, Tracer::LEVEL4, buf);
 
     //initialize the CRL store
-    // TODO: is this a 1.1.0 change to use pointers
-#ifdef OPENSSL_11_API_COMPATIBILITY
     X509_STORE_CTX* crlStoreCtx = X509_STORE_CTX_new();
 
     X509_STORE_CTX_init(crlStoreCtx, sslCRLStore, NULL, NULL);
@@ -271,7 +268,6 @@ int SSLCallback::verificationCRLCallback(
         "---> SSL: Initialized CRL store");
 
     //attempt to get a CRL issued by the certificate's issuer
-    // X509_OBJECT* obj;
     X509_OBJECT *x509_obj = X509_OBJECT_new();
     if (X509_STORE_get_by_subject(
             crlStoreCtx, X509_LU_CRL, issuerName, x509_obj) <= 0)
@@ -279,42 +275,14 @@ int SSLCallback::verificationCRLCallback(
         X509_STORE_CTX_cleanup(crlStoreCtx);
         PEG_TRACE_CSTRING(TRC_SSL, Tracer::LEVEL3,
             "---> SSL: No CRL by that issuer");
-        // free x509_obj
-        OPENSSL_free(x509_obj);
+        X509_OBJECT_free(x509_obj);
         PEG_METHOD_EXIT();
         return 0;
     }
     X509_STORE_CTX_cleanup(crlStoreCtx);
 
     //get CRL
-    // move to X509_local_crl_file
-    /// X509_OBJECT_get0_X509_CRL
-    // X509_CRL* crl = x509_obj->data.crl;
     X509_CRL* crl = X509_OBJECT_get0_X509_CRL(x509_obj);
-
-# else
-    X509_STORE_CTX crlStoreCtx;
-    X509_STORE_CTX_init(&crlStoreCtx, sslCRLStore, NULL, NULL);
-
-    PEG_TRACE_CSTRING(TRC_SSL, Tracer::LEVEL4,
-        "---> SSL: Initialized CRL store");
-
-    //attempt to get a CRL issued by the certificate's issuer
-    X509_OBJECT obj;
-    if (X509_STORE_get_by_subject(
-            &crlStoreCtx, X509_LU_CRL, issuerName, &obj) <= 0)
-    {
-        X509_STORE_CTX_cleanup(&crlStoreCtx);
-        PEG_TRACE_CSTRING(TRC_SSL, Tracer::LEVEL3,
-            "---> SSL: No CRL by that issuer");
-        PEG_METHOD_EXIT();
-        return 0;
-    }
-    X509_STORE_CTX_cleanup(&crlStoreCtx);
-
-    //get CRL
-    X509_CRL* crl = obj.data.crl;
-#endif
 
     if (crl == NULL)
     {
@@ -354,15 +322,7 @@ int SSLCallback::verificationCRLCallback(
     {
         revokedCert = sk_X509_REVOKED_value(X509_CRL_get_REVOKED(crl), i);
         // A matching serial number indicates revocation
-
-#ifdef OPENSSL_11_API_COMPATIBILITY
-        // Cannot access serial number in 1.1.0 directly.
-        // TODO: Why not use X509_CRL_get0_by_serial() or
-        //                 or X509_CRL_get0_by_cert(crl, **ret, *x509)
         if (ASN1_INTEGER_cmp(X509_REVOKED_get0_serialNumber(revokedCert), serialNumber) == 0)
-#else
-        if (ASN1_INTEGER_cmp(revokedCert->serialNumber, serialNumber) == 0)
-#endif
         {
             PEG_TRACE_CSTRING(TRC_SSL, Tracer::LEVEL2,
                 "---> SSL: Certificate is revoked");
@@ -461,9 +421,9 @@ int SSLCallback::verificationCallback(int preVerifyOk, X509_STORE_CTX* ctx)
     //
     // get the validity of the certificate
     //
-    CIMDateTime notBefore = getDateTime(X509_get_notBefore(currentCert));
+    CIMDateTime notBefore = getDateTime(X509_get0_notBefore(currentCert));
 
-    CIMDateTime notAfter = getDateTime(X509_get_notAfter(currentCert));
+    CIMDateTime notAfter = getDateTime(X509_get0_notAfter(currentCert));
 
     //
     // get the subject name on the certificate
@@ -802,7 +762,7 @@ SSL_CTX* SSLContextRep::_makeSSLContext()
     // create SSL Context Area
     //
     SSL_CTX *sslContext = NULL;
-    if (!(sslContext = SSL_CTX_new(SSLv23_method())))
+    if (!(sslContext = SSL_CTX_new(TLS_method())))
     {
         PEG_METHOD_EXIT();
         MessageLoaderParms parms(
@@ -817,43 +777,16 @@ SSL_CTX* SSLContextRep::_makeSSLContext()
     int options = SSL_OP_ALL;
     SSL_CTX_set_options(sslContext, options);
 
-    // If _sslBackwardCompatibility is false, set flags to allow only TLS 1.2+
-    // for OpenSSL v 1.1.0+ set the max and min versions
-    // Note that min version allowed by OpenSSL 1.1.0+ is SSL3_VERSION
-# ifdef OPENSSL_11_API_COMPATIBILITY
-	// TODO: Should we set the max version???
-	assert(SSL_CTX_set_max_proto_version(sslContext,TLS1_2_VERSION) == 1);
-	unsigned long int min_ver =
-            (_sslBackwardCompatibility == false) ? TLS1_2_VERSION : SSL3_VERSION;
+    // Set protocol version bounds.
+    // When sslBackwardCompatibility is false, enforce TLS 1.2 as the minimum.
+    // When true, allow TLS 1.0 and above (TLS 1.3 is always the upper bound).
+    {
+        unsigned long int min_ver =
+            (_sslBackwardCompatibility == false) ? TLS1_2_VERSION : TLS1_VERSION;
 
-	// call SSL to set the min TLS version
-	assert(SSL_CTX_set_min_proto_version(
-                sslContext,
-                min_ver
-            ) == 1);
-
-# else  // # ifdef OPENSSL_11_API_COMPATIBILITY
-// The TLS1_2_VERSION flag is in Openssl tls1.h
-// We are expecting TLS 1.2 as the current version.
-#  ifdef TLS1_2_VERSION
-        // Enable only TLSv1.2 and disable all other protocol (SSL v2, SSL v3,
-        // TLS v1.0, TLSv1.1)
-        options = SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_SSLv3;
-#  else  // not TLS1_2_VERSION
-        PEG_METHOD_EXIT();
-        MessageLoaderParms parms(
-            " Common.SSLContext.TLS_1_2_PROTO_NOT_SUPPORTED",
-            "TLSv1.2 protocol support is not detected on this system. "
-            " To run in less secured mode, set sslBackwardCompatibility=true"
-            " in planned config file and start cimserver.");
-        throw SSLException(parms);
-#  endif // TLS1_2_VERSION
-
-    // sslv2 is off permanently even if sslBackwardCompatibility is true
-    options |= SSL_OP_NO_SSLv2;
-    SSL_CTX_set_options(sslContext, options);
-
-# endif // # ifdef OPENSSL_11_API_COMPATIBILITY
+        // Set minimum TLS version; no maximum is imposed so TLS 1.3 is allowed.
+        assert(SSL_CTX_set_min_proto_version(sslContext, min_ver) == 1);
+    }
 
 
 #ifdef PEGASUS_SSL_WEAKENCRYPTION
@@ -892,19 +825,11 @@ SSL_CTX* SSLContextRep::_makeSSLContext()
     }
 
     //
-    // set overall SSL Context flags
+    // Disable SSL compression (SSL_OP_NO_COMPRESSION is always defined in
+    // OpenSSL 3.0+).
     //
-    // For OpenSSLversion >1.0.0 use SSL_OP_NO_COMPRESSION to disable the
-    // compression For TLS 1.2 version, compression does not suffer from
-    // CRIME attack so don.t disable compression For other OpenSSL versions
-    // zero out the compression methods.
 #ifdef SSL_OP_NO_COMPRESSION
-// ISSUE #69: Should we disable compression for TLS 1.2
-#ifndef TLS1_2_VERSION
     SSL_CTX_set_options(sslContext, SSL_OP_NO_COMPRESSION);
-#endif // TLS1_2_VERSION
-#elif OPENSSL_VERSION_NUMBER >= 0x00908000L
-    sk_SSL_COMP_zero(SSL_COMP_get_compression_methods());
 #endif // SSL_OP_NO_COMPRESSION
     SSL_CTX_set_quiet_shutdown(sslContext, 1);
     SSL_CTX_set_mode(sslContext, SSL_MODE_AUTO_RETRY);
@@ -1343,7 +1268,7 @@ void SSLContextRep::validateCertificate()
     BIO_free(in);
     PEGASUS_ASSERT(cert != NULL);
 
-    if (X509_cmp_current_time(X509_get_notBefore(cert)) > 0)
+    if (X509_cmp_current_time(X509_get0_notBefore(cert)) > 0)
     {
         X509_free(cert);
         MessageLoaderParms parms(
@@ -1353,7 +1278,7 @@ void SSLContextRep::validateCertificate()
         throw SSLException(parms);
     }
 
-    if (X509_cmp_current_time(X509_get_notAfter(cert)) < 0)
+    if (X509_cmp_current_time(X509_get0_notAfter(cert)) < 0)
     {
         X509_free(cert);
         MessageLoaderParms parms(

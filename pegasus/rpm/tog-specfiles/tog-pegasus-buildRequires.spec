@@ -2,7 +2,7 @@
 #
 BuildRequires:      bash, sed, grep, coreutils, procps, gcc, gcc-c++
 BuildRequires:      libstdc++, make, pam-devel
-BuildRequires:      openssl-devel >= 0.9.6, e2fsprogs
+BuildRequires:      openssl-devel >= 3.0, e2fsprogs
 
 #Following is commented because, Currently could not find clang shipped
 #Should be changed or uncommented when distros ship clang

@@ -44,13 +44,14 @@ typedef struct x509_store_st X509_STORE;
 # define X509_STORE int
 #endif
 
-// If OpenSSL version  1.1.0 or greater set flag to control API differences
-// Required because of API issues in version 1.1.0
-// Some of the APIs are completely different.
-// If OPENSSL_11_API_COMPATIBILITY version OpenSSL version >= 1.1.0
-# if OPENSSL_VERSION_NUMBER >= 0x10100000L
-#  define OPENSSL_11_API_COMPATIBILITY
+// OpenPegasus requires OpenSSL 3.0.8 or higher.
+// Enforce minimum version at compile time.
+# if OPENSSL_VERSION_NUMBER < 0x30000000L
+#  error "OpenSSL version 3.0.8 or higher is required to build OpenPegasus"
 # endif
+// OPENSSL_11_API_COMPATIBILITY is always defined for OpenSSL 3.0+.
+// It gates code paths that use OpenSSL 1.1.0+ opaque-struct accessors.
+# define OPENSSL_11_API_COMPATIBILITY
 
 PEGASUS_NAMESPACE_BEGIN
 

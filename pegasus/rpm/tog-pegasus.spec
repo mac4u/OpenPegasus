@@ -83,7 +83,7 @@ Source:    %{name}-%{version}-%{packageVersion}.tar.gz
 #
 BuildRequires:      bash, sed, grep, coreutils, procps, gcc, gcc-c++
 BuildRequires:      libstdc++, make, pam-devel
-BuildRequires:      openssl-devel >= 0.9.6, e2fsprogs
+BuildRequires:      openssl-devel >= 3.0, e2fsprogs
 
 #Following is commented because, Currently could not find clang shipped
 #Should be changed or uncommented when distros ship clang
@@ -107,16 +107,16 @@ BuildRequires:      net-snmp-devel
 
 # Start of section pegasus/rpm/tog-specfiles/tog-pegasus-requires.spec
 #
-Requires:           bash, sed, grep, coreutils, procps, openssl >= 0.9.6, pam
+Requires:           bash, sed, grep, coreutils, procps, openssl >= 3.0, pam
 #Requires:          krb5-libs, chkconfig, SysVinit, bind-libs
 Requires:           e2fsprogs, bind-utils, net-tools
-Requires(post):     bash, sed, grep, coreutils, procps, openssl >= 0.9.6, pam
+Requires(post):     bash, sed, grep, coreutils, procps, openssl >= 3.0, pam
 #Requires(post):    krb5-libs, chkconfig, SysVinit, bind-libs
 Requires(post):     e2fsprogs, bind-utils, net-tools
-Requires(pre):      bash, sed, grep, coreutils, procps, openssl >= 0.9.6, pam
+Requires(pre):      bash, sed, grep, coreutils, procps, openssl >= 3.0, pam
 #Requires(pre):     krb5-libs, chkconfig, SysVinit, bind-libs
 Requires(pre):      e2fsprogs, bind-utils, net-tools
-Requires(postun):   bash, sed, grep, coreutils, procps, openssl >= 0.9.6, pam
+Requires(postun):   bash, sed, grep, coreutils, procps, openssl >= 3.0, pam
 #Requires(postun):  krb5-libs, chkconfig, SysVinit, bind-libs
 Requires(postun):   e2fsprogs, bind-utils, net-tools
 Requires:           net-snmp
