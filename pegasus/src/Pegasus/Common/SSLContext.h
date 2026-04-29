@@ -46,7 +46,7 @@ typedef struct x509_store_st X509_STORE;
 
 // OpenPegasus requires OpenSSL 3.0.8 or higher.
 // Enforce minimum version at compile time.
-# if OPENSSL_VERSION_NUMBER < 0x30000000L
+# if OPENSSL_VERSION_NUMBER < 0x30000080L
 #  error "OpenSSL version 3.0.8 or higher is required to build OpenPegasus"
 # endif
 // OPENSSL_11_API_COMPATIBILITY is always defined for OpenSSL 3.0+.
