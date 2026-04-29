@@ -373,6 +373,9 @@ public:
         requested for certificate verification.
         @param randomFile  file path of a random file that may be used as a seed
         for random number generation by OpenSSL.
+        @param sslBackwardCompatibility  when false (the default), only TLS 1.2
+        or higher is accepted.  When true, TLS 1.0 and above is accepted,
+        allowing connections to servers that do not yet support TLS 1.2.
 
         NOTE:
         For platforms that support /dev/random(urandom), the /dev/random
@@ -390,7 +393,8 @@ public:
     SSLContext(
         const String& trustStore,
         SSLCertificateVerifyFunction* verifyCert,
-        const String& randomFile = String::EMPTY);
+        const String& randomFile = String::EMPTY,
+        const Boolean& sslBackwardCompatibility = false);
 
     /**
         Constructs an SSLContext by copying another SSLContext object.
@@ -522,7 +526,6 @@ public:
         SSLCertificateVerifyFunction* verifyCert,
         const String& randomFile);
 
-#ifdef PEGASUS_USE_EXPERIMENTAL_INTERFACES
     /** Constructor for an SSLContext object. This constructor is intended
         to be used by the CIMServer or CIMClient.
         @param trustStore file path of the trust store.
@@ -535,9 +538,9 @@ public:
         @param randomFile  file path of a random file that may be used as a seed
         for random number generation by OpenSSL.
         @param cipherSuite cipher list
-        @param sslBackwardCompatibility  a false value of sslBackwardCompatibility 
-        will support only TLS1.2 and true will support SSLv3 and TLSv1 
-
+        @param sslBackwardCompatibility  when false (the default), only TLS 1.2
+        or higher is accepted.  When true, TLS 1.0 and above is accepted,
+        allowing connections to servers that do not yet support TLS 1.2.
 
         NOTE:
         For platforms that support /dev/random(urandom), the /dev/random
@@ -562,8 +565,6 @@ public:
         const String& cipherSuite,
         const Boolean & sslBackwardCompatibility = false);
 
-
-#endif
 
 #ifdef PEGASUS_USE_DEPRECATED_INTERFACES
     /** Constructor for an SSLContextRep object.

@@ -275,6 +275,8 @@ int SSLCallback::verificationCRLCallback(
         X509_STORE_CTX_cleanup(crlStoreCtx);
         PEG_TRACE_CSTRING(TRC_SSL, Tracer::LEVEL3,
             "---> SSL: No CRL by that issuer");
+        // X509_OBJECT_free() is the correct ownership-aware API in OpenSSL 3.0+.
+        // The old OPENSSL_free() was incorrect and was removed.
         X509_OBJECT_free(x509_obj);
         PEG_METHOD_EXIT();
         return 0;
@@ -1367,7 +1369,8 @@ void SSLContextRep::validateCertificate() { }
 SSLContext::SSLContext(
     const String& trustStore,
     SSLCertificateVerifyFunction* verifyCert,
-    const String& randomFile)
+    const String& randomFile,
+    const Boolean& sslBackwardCompatibility)
 {
     _rep = new SSLContextRep(
         trustStore,
@@ -1377,7 +1380,7 @@ SSLContext::SSLContext(
         verifyCert,
         randomFile,
         String::EMPTY,
-        false);
+        sslBackwardCompatibility);
 }
 
 SSLContext::SSLContext(
@@ -1413,7 +1416,6 @@ SSLContext::SSLContext(
         trustStore, certPath, keyPath, crlPath, verifyCert, randomFile);
 }
 
-#ifdef PEGASUS_USE_EXPERIMENTAL_INTERFACES
 SSLContext::SSLContext(
         const String& trustStore,
         const String& certPath,
@@ -1437,7 +1439,6 @@ SSLContext::SSLContext(
         trustStore, certPath, keyPath, crlPath, verifyCert, randomFile,
         cipherSuite,sslBackwardCompatibility);
 }
-#endif
 
 #ifdef PEGASUS_USE_DEPRECATED_INTERFACES
 SSLContext::SSLContext(
